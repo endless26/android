@@ -81,7 +81,8 @@ import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
     private static final int MY_PERMISSIONS_WRITE_EXTERNAL_STORAGE = 1;
-    private static String appPath = "com.tokyo.app";
+    private static String applicationPath = "com.tokyo.app";
+    private static String appPath;
     private View decorView;
 
     private ProgressDialog pDialog;
@@ -115,6 +116,15 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+
+        final Button getLang = findViewById(R.id.getLang);
+        getLang.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                System.out.println(getLang());
+            }
+        });
+
         Button getBtn = findViewById(R.id.getBtn);
         getBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -137,7 +147,6 @@ public class MainActivity extends AppCompatActivity {
                     switch (fileType){
                         case ".csv":
                             fileText.setText(fileName.getText());
-                            System.out.println(getLang());
                             break;
                         case ".png":
                         case ".jpg":
@@ -186,6 +195,7 @@ public class MainActivity extends AppCompatActivity {
         csvFile.add("id.csv");
         csvFile.add("en.csv");
         csvFile.add("zh.csv");
+        csvFile.add("th.csv");
         csvFile.add("hk-pools.png");
         csvFile.add("sg-pools.png");
         csvFile.add("sydney-pools.png");
@@ -233,7 +243,7 @@ public class MainActivity extends AppCompatActivity {
          * */
         @Override
         protected String doInBackground(String[] f_url) {
-
+            appPath = applicationPath;
             System.out.println("externalstorage "+Environment.getExternalStorageDirectory());
             int count;
             try {
@@ -248,17 +258,27 @@ public class MainActivity extends AppCompatActivity {
                 // download the file
                 InputStream input = new BufferedInputStream(url.openStream(), 8192);
 
-                File mediaStorageDir = new File(Environment.getExternalStorageDirectory(), appPath);
 
+                String fileName = f_url[0].substring(f_url[0].lastIndexOf('/') + 1);
+                System.out.println("fileName fileName "+fileName);
+                // Output stream
+                String fileType = fileName.substring(fileName.lastIndexOf("."));
+                System.out.println("fileType "+fileType);
+                switch (fileType){
+                    case ".csv":
+                        appPath = appPath+"/lang";
+                        break;
+                    case ".png":
+                    case ".jpg":
+                        appPath = appPath+"/img";
+                        break;
+                }
+                File mediaStorageDir = new File(Environment.getExternalStorageDirectory(), appPath);
                 if (!mediaStorageDir.exists()) {
                     if (!mediaStorageDir.mkdirs()) {
                         Log.d("App", "failed to create directory");
                     }
                 }
-
-                String fileName = f_url[0].substring(f_url[0].lastIndexOf('/') + 1);
-                System.out.println("fileName fileName "+fileName);
-                // Output stream
                 OutputStream output = new FileOutputStream(Environment.getExternalStorageDirectory().toString() + "/"+appPath+"/"+fileName);
 
                 byte data[] = new byte[1024];
@@ -308,35 +328,56 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private JSONObject getLang() {
+        appPath = applicationPath;
         JSONObject object = new JSONObject();
-        JSONArray array = new JSONArray();
         List<String> mLines = new ArrayList<>();
 
-        AssetManager assetManager = getApplicationContext().getAssets();
-        File path = new File(Environment.getExternalStorageDirectory(), appPath+"/"+fileName.getText());
-        System.out.println("read file path "+path);
-        try {
-            CSVReader reader = new CSVReader(new FileReader(path));
-            String[] nextLine;
-            while ((nextLine = reader.readNext()) != null) {
-                nextLine[0] = nextLine[0].replaceAll("\\s", "");
-                if(!nextLine[0].contains("/") && !nextLine[0].equals("") && nextLine[0].compareToIgnoreCase("code") != 65180) {
-                    try {
-                        JSONObject line = new JSONObject();
-//                    System.out.println(nextLine[0]+" compare code ="+nextLine[0].compareToIgnoreCase("code"));
-                        System.out.println("key = " + nextLine[0] + ", value = " + nextLine[1]);
-                        line.put("key",nextLine[0]);
-                        line.put("value",nextLine[1]);
-                        array.put(line);
-                    }catch (Exception e){
-                        e.printStackTrace();
+//        File path = new File(Environment.getExternalStorageDirectory(), appPath+"/lang/");
+//        File files[] = path.listFiles();
+        String path = Environment.getExternalStorageDirectory()+"/"+appPath+"/lang/";
+        File folder = new File(path);
+        File[] files = folder.listFiles();
+        JSONObject obLang = new JSONObject();
+        JSONArray array = new JSONArray();
+        for (File file : files) { //For each of the entries do:
+            array = new JSONArray();
+            JSONArray arLang = new JSONArray();
+            if (!file.isDirectory()) { //check that it's not a dir
+                System.out.println(file.getName());
+
+                String fileName = file.getName();
+                fileName = fileName.replace(".csv","");
+                try {
+                    CSVReader reader = new CSVReader(new FileReader(path+file.getName()));
+                    String[] nextLine;
+                    while ((nextLine = reader.readNext()) != null) {
+                        JSONObject obLine = new JSONObject();
+                        if(!nextLine[0].contains("/") && !nextLine[0].equals("")) {
+                            System.out.println(nextLine[0]);
+                            if(obLang.has("key")){
+                                if(obLang.get("key") != nextLine[0]){
+                                    obLang = new JSONObject();
+                                }
+                            }
+//                            obLang.put("key",nextLine[0]);
+                            obLang.put(fileName,nextLine[1]);
+                            array.put(obLang);
+                        }
                     }
+//                    obLang.put(fileName,arLang);
+//                    array.put(obLang);
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             }
-            object.put("lang",array);
-        } catch (IOException | JSONException e) {
-            e.printStackTrace();
         }
+
+        System.out.println(array);
+//        try {
+//            object.put("lang",array);
+//        } catch (JSONException e) {
+//            e.printStackTrace();
+//        }
 
         return object;
     }
