@@ -330,6 +330,7 @@ public class MainActivity extends AppCompatActivity {
     private JSONObject getLang() {
         appPath = applicationPath;
         JSONObject object = new JSONObject();
+        JSONArray array = new JSONArray();
         List<String> mLines = new ArrayList<>();
 
 //        File path = new File(Environment.getExternalStorageDirectory(), appPath+"/lang/");
@@ -337,10 +338,8 @@ public class MainActivity extends AppCompatActivity {
         String path = Environment.getExternalStorageDirectory()+"/"+appPath+"/lang/";
         File folder = new File(path);
         File[] files = folder.listFiles();
-        JSONObject obLang = new JSONObject();
-        JSONArray array = new JSONArray();
         for (File file : files) { //For each of the entries do:
-            array = new JSONArray();
+            JSONObject obLang = new JSONObject();
             JSONArray arLang = new JSONArray();
             if (!file.isDirectory()) { //check that it's not a dir
                 System.out.println(file.getName());
@@ -349,35 +348,27 @@ public class MainActivity extends AppCompatActivity {
                 fileName = fileName.replace(".csv","");
                 try {
                     CSVReader reader = new CSVReader(new FileReader(path+file.getName()));
-                    String[] nextLine;
-                    while ((nextLine = reader.readNext()) != null) {
-                        JSONObject obLine = new JSONObject();
-                        if(!nextLine[0].contains("/") && !nextLine[0].equals("")) {
-                            System.out.println(nextLine[0]);
-                            if(obLang.has("key")){
-                                if(obLang.get("key") != nextLine[0]){
-                                    obLang = new JSONObject();
-                                }
-                            }
-//                            obLang.put("key",nextLine[0]);
-                            obLang.put(fileName,nextLine[1]);
-                            array.put(obLang);
+                    String[] line;
+                    while ((line = reader.readNext()) != null) {
+                        if(!line[0].contains("/") && !line[0].equals("")) {
+                            JSONObject obLine = new JSONObject();
+                            obLine.put("key", line[0]);
+                            obLine.put("value", line[1]);
+                            arLang.put(obLine);
                         }
                     }
-//                    obLang.put(fileName,arLang);
-//                    array.put(obLang);
+                    obLang.put(fileName,arLang);
+                    array.put(obLang);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
         }
-
-        System.out.println(array);
-//        try {
-//            object.put("lang",array);
-//        } catch (JSONException e) {
-//            e.printStackTrace();
-//        }
+        try {
+            object.put("lang",array);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
 
         return object;
     }
