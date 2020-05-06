@@ -29,6 +29,14 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
     </Button>
+
+    <Button
+        android:text="Download"
+        android:id="@+id/download"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+    </Button>
+
     <TextView
         android:id="@+id/file"
         android:layout_width="match_parent"

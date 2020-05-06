@@ -4,7 +4,10 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Dialog;
+import android.app.DownloadManager;
 import android.app.IntentService;
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -14,6 +17,7 @@ import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
@@ -116,12 +120,19 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-
-        final Button getLang = findViewById(R.id.getLang);
+        Button getLang = findViewById(R.id.getLang);
         getLang.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 System.out.println(getLang());
+            }
+        });
+
+        final Button download = findViewById(R.id.download);
+        download.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                download();
             }
         });
 
@@ -133,17 +144,14 @@ public class MainActivity extends AppCompatActivity {
                 fileName = findViewById(R.id.fileName);
                 ImageView myImage = findViewById(R.id.image);
 
-//                System.out.println("file "+getApplicationContext().getFilesDir());
-                System.out.println("file "+Environment.getExternalStorageDirectory());
-//                String filePath = Environment.getExternalStorageDirectory()+"/"+appPath+"/"+fileName;
+//                System.out.println("file "+Environment.getExternalStorageDirectory());
                 File file = new File(Environment.getExternalStorageDirectory(), appPath+"/"+fileName.getText());
-//                File file = new File(filePath);
-                System.out.println("filePath "+file);
-                System.out.println(file.exists());
+//                System.out.println("filePath "+file);
+//                System.out.println(file.exists());
                 if(file.exists()){
                     String fileType = fileName.getText().toString().substring(fileName.getText().toString().lastIndexOf("."));
 
-                    System.out.println("fileType "+fileType);
+//                    System.out.println("fileType "+fileType);
                     switch (fileType){
                         case ".csv":
                             fileText.setText(fileName.getText());
@@ -161,21 +169,21 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        decorView = getWindow().getDecorView();
-        decorView.setOnSystemUiVisibilityChangeListener(new View.OnSystemUiVisibilityChangeListener() {
-            @Override
-            public void onSystemUiVisibilityChange(int visibility) {
-                if (visibility == 0) {
-                    decorView.setSystemUiVisibility(hideSystemBards());
-                }
-            }
-        });
+//        decorView = getWindow().getDecorView();
+//        decorView.setOnSystemUiVisibilityChangeListener(new View.OnSystemUiVisibilityChangeListener() {
+//            @Override
+//            public void onSystemUiVisibilityChange(int visibility) {
+//                if (visibility == 0) {
+//                    decorView.setSystemUiVisibility(hideSystemBards());
+//                }
+//            }
+//        });
     }
     @Override
     public void onWindowFocusChanged(boolean hasFocus){
         super.onWindowFocusChanged(hasFocus);
         if(hasFocus){
-            decorView.setSystemUiVisibility(hideSystemBards());
+//            decorView.setSystemUiVisibility(hideSystemBards());
         }
     }
 
@@ -196,11 +204,11 @@ public class MainActivity extends AppCompatActivity {
         csvFile.add("en.csv");
         csvFile.add("zh.csv");
         csvFile.add("th.csv");
-        csvFile.add("hk-pools.png");
-        csvFile.add("sg-pools.png");
-        csvFile.add("sydney-pools.png");
-        csvFile.add("tokyo-pools.png");
-        csvFile.add("gear-icon.png");
+//        csvFile.add("hk-pools.png");
+//        csvFile.add("sg-pools.png");
+//        csvFile.add("sydney-pools.png");
+//        csvFile.add("tokyo-pools.png");
+//        csvFile.add("gear-icon.png");
 
         for(int i = 0;i<csvFile.size();i++) {
             new DownloadFileFromURL().execute(file_url + csvFile.get(i));
@@ -327,49 +335,63 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private JSONObject getLang() {
+    private String getLang() {
         appPath = applicationPath;
         JSONObject object = new JSONObject();
         JSONArray array = new JSONArray();
         List<String> mLines = new ArrayList<>();
 
-//        File path = new File(Environment.getExternalStorageDirectory(), appPath+"/lang/");
-//        File files[] = path.listFiles();
         String path = Environment.getExternalStorageDirectory()+"/"+appPath+"/lang/";
         File folder = new File(path);
         File[] files = folder.listFiles();
-        for (File file : files) { //For each of the entries do:
-            JSONObject obLang = new JSONObject();
-            JSONArray arLang = new JSONArray();
-            if (!file.isDirectory()) { //check that it's not a dir
-                System.out.println(file.getName());
-
-                String fileName = file.getName();
-                fileName = fileName.replace(".csv","");
-                try {
-                    CSVReader reader = new CSVReader(new FileReader(path+file.getName()));
-                    String[] line;
-                    while ((line = reader.readNext()) != null) {
-                        if(!line[0].contains("/") && !line[0].equals("")) {
-                            JSONObject obLine = new JSONObject();
-                            obLine.put("key", line[0]);
-                            obLine.put("value", line[1]);
-                            arLang.put(obLine);
+        JSONObject obLanguage = new JSONObject();
+        for (File file : files) {
+            JSONArray arLanguage = new JSONArray();
+            String fileName = file.getName();
+            fileName = fileName.replace(".csv", "");
+            try {
+                CSVReader reader = new CSVReader(new FileReader(path + file.getName()));
+                String[] line;
+                JSONObject obLine = new JSONObject();
+                while ((line = reader.readNext()) != null) {
+                    if (!line[0].contains("/") && !line[0].equals("")) {
+                        if(line[1].compareTo("lang") != 0) {
+                            obLine.put(line[0], line[1]);
                         }
                     }
-                    obLang.put(fileName,arLang);
-                    array.put(obLang);
-                } catch (Exception e) {
-                    e.printStackTrace();
                 }
+//                arLanguage.put(obLine);
+//                obLanguage.put(fileName,arLanguage);
+                obLanguage.put(fileName,obLine);
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
         try {
-            object.put("lang",array);
-        } catch (JSONException e) {
+            object.put("lang",obLanguage);
+        }catch (Exception e){
             e.printStackTrace();
         }
+        return String.valueOf(object);
+    }
 
-        return object;
+    private DownloadManager downloadManager;
+    private void download(){
+        downloadManager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+        Uri uri = Uri.parse("http://www.sixasix.com/tokyotg/toggle.apk");
+        File file = new File(Environment.getExternalStorageDirectory()+"/Download/", "toggle.apk");
+        DownloadManager.Request request = new DownloadManager.Request(uri);
+        request.setTitle("Tokyo Toggle");
+        request.setDescription("Downloading...");
+        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+        request.setVisibleInDownloadsUi(false);
+        request.setDestinationUri(Uri.fromFile(file));
+        request.setDestinationInExternalPublicDir("/Download","toggle.apk");
+
+//        PendingIntent pending = PendingIntent.getActivity(getApplicationContext(),0, install_intent, 0);
+//        Notification.Builder notification = null;
+//        notification.setContentIntent(pending);
+
+        downloadManager.enqueue(request);
     }
 }
