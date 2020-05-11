@@ -31,6 +31,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import android.os.Environment;
@@ -61,6 +62,8 @@ import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
@@ -87,26 +90,25 @@ public class MainActivity extends AppCompatActivity {
     private static final int MY_PERMISSIONS_WRITE_EXTERNAL_STORAGE = 1;
     private static String applicationPath = "com.tokyo.app";
     private static String appPath;
-    private View decorView;
 
     private ProgressDialog pDialog;
     public static final int progress_bar_type = 0;
     private EditText fileName;
+
+    public static Context context;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        context = this.getApplicationContext();
+
         if (ContextCompat.checkSelfPermission(this,Manifest.permission.WRITE_EXTERNAL_STORAGE)!= PackageManager.PERMISSION_GRANTED) {
             // Permission is not granted
             if (ActivityCompat.shouldShowRequestPermissionRationale(this,
                     Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-                // Show an explanation to the user *asynchronously* -- don't block
-                // this thread waiting for the user's response! After the user
-                // sees the explanation, try again to request the permission.
             } else {
-                // No explanation needed; request the permission
                 ActivityCompat.requestPermissions(this,
                         new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
                         MY_PERMISSIONS_WRITE_EXTERNAL_STORAGE);
@@ -124,6 +126,7 @@ public class MainActivity extends AppCompatActivity {
         getLang.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+//                getLang();
                 System.out.println(getLang());
             }
         });
@@ -144,14 +147,10 @@ public class MainActivity extends AppCompatActivity {
                 fileName = findViewById(R.id.fileName);
                 ImageView myImage = findViewById(R.id.image);
 
-//                System.out.println("file "+Environment.getExternalStorageDirectory());
                 File file = new File(Environment.getExternalStorageDirectory(), appPath+"/"+fileName.getText());
-//                System.out.println("filePath "+file);
-//                System.out.println(file.exists());
                 if(file.exists()){
                     String fileType = fileName.getText().toString().substring(fileName.getText().toString().lastIndexOf("."));
 
-//                    System.out.println("fileType "+fileType);
                     switch (fileType){
                         case ".csv":
                             fileText.setText(fileName.getText());
@@ -204,11 +203,6 @@ public class MainActivity extends AppCompatActivity {
         csvFile.add("en.csv");
         csvFile.add("zh.csv");
         csvFile.add("th.csv");
-//        csvFile.add("hk-pools.png");
-//        csvFile.add("sg-pools.png");
-//        csvFile.add("sydney-pools.png");
-//        csvFile.add("tokyo-pools.png");
-//        csvFile.add("gear-icon.png");
 
         for(int i = 0;i<csvFile.size();i++) {
             new DownloadFileFromURL().execute(file_url + csvFile.get(i));
@@ -335,7 +329,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private String getLang() {
+    private String getLangBackup() {
         appPath = applicationPath;
         JSONObject object = new JSONObject();
         JSONArray array = new JSONArray();
@@ -360,8 +354,6 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                 }
-//                arLanguage.put(obLine);
-//                obLanguage.put(fileName,arLanguage);
                 obLanguage.put(fileName,obLine);
             } catch (Exception e) {
                 e.printStackTrace();
@@ -375,9 +367,8 @@ public class MainActivity extends AppCompatActivity {
         return String.valueOf(object);
     }
 
-    private DownloadManager downloadManager;
-    private void download(){
-        downloadManager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+    public static void download(){
+        DownloadManager downloadManager = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
         Uri uri = Uri.parse("http://www.sixasix.com/tokyotg/toggle.apk");
         File file = new File(Environment.getExternalStorageDirectory()+"/Download/", "toggle.apk");
         DownloadManager.Request request = new DownloadManager.Request(uri);
@@ -388,10 +379,47 @@ public class MainActivity extends AppCompatActivity {
         request.setDestinationUri(Uri.fromFile(file));
         request.setDestinationInExternalPublicDir("/Download","toggle.apk");
 
-//        PendingIntent pending = PendingIntent.getActivity(getApplicationContext(),0, install_intent, 0);
-//        Notification.Builder notification = null;
-//        notification.setContentIntent(pending);
-
         downloadManager.enqueue(request);
+    }
+
+    private String getLang(){
+        appPath = applicationPath;
+        JSONObject object = new JSONObject();
+
+        String path = Environment.getExternalStorageDirectory()+"/"+appPath+"/lang/";
+        File folder = new File(path);
+        File[] files = folder.listFiles();
+
+        JSONObject obLanguage = new JSONObject();
+
+        assert files != null;
+        for (File file : files) {
+            String fileName = file.getName();
+            File csvFile = new File(path, fileName);
+
+            fileName = fileName.replace(".csv", "");
+            try {
+                JSONObject obLine = new JSONObject();
+
+                InputStream inputStream = new FileInputStream(csvFile);
+                CSVFile csv = new CSVFile(inputStream);
+                String line;
+                BufferedReader reader = csv.read();
+
+                while ((line = reader.readLine()) != null) {
+                    String[] row = line.split(",");
+                    if (!row[0].contains("/") && !row[0].equals("")) {
+                        if (row[1].compareTo("lang") != 0) {
+                            obLine.put(row[0], row[1]);
+                        }
+                    }
+                    obLanguage.put(fileName, obLine);
+                }
+                object.put("lang", obLanguage);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return String.valueOf(object);
     }
 }
